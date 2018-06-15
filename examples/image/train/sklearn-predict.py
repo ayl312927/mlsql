@@ -3,7 +3,7 @@ from pyspark.ml.linalg import VectorUDT, Vectors
 import pickle
 import os
 
-run_for_test = False
+run_for_test = True
 if run_for_test:
     import mlsql.python_fun
 else:
