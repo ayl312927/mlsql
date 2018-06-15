@@ -1,3 +1,4 @@
 mlsql.iml
 .idea
 __pycache__
+*.pickle

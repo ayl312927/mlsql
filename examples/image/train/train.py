@@ -8,8 +8,8 @@ import os
 import json
 import sys
 
-run_for_test = True
-
+run_for_test = False
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 if run_for_test:
     if sys.version < '3':
         import cPickle as pickle
@@ -57,6 +57,7 @@ height = int(getFitParamWithDefault("height", 100))
 labelSize = int(getFitParamWithDefault("labelSize", 10))
 featureCol = getFitParamWithDefault("featureCol", "features")
 labelCol = getFitParamWithDefault("labelCol", "label")
+epoch = int(getFitParamWithDefault("epoch", "1"))
 
 
 def get_validate_data():
@@ -139,8 +140,11 @@ class TestCallback(Callback):
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 
-model.fit_generator(fetchData(), epochs=10, steps_per_epoch=564 / 64, validation_data=(X_test, y_test),
-                    callbacks=[TestCallback((X_test, y_test))])
+if run_for_test:
+    model.fit_generator(fetchData(), epochs=10, steps_per_epoch=564 / 64, validation_data=(X_test, y_test),
+                        callbacks=[TestCallback((X_test, y_test))])
+else:
+    model.fit_generator(fetchData(), epochs=epoch, steps_per_epoch=9000 / 64)
 
 isp = mlsql.params()["internalSystemParam"]
 
