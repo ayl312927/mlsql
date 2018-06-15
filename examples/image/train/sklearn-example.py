@@ -40,8 +40,7 @@ if run_for_test:
 import mlsql
 
 
-def getFitParamWithDefault(key, value):
-    res = None
+def param(key, value):
     if key in mlsql.fit_param:
         res = mlsql.fit_param[key]
     else:
@@ -49,8 +48,8 @@ def getFitParamWithDefault(key, value):
     return res
 
 
-featureCol = getFitParamWithDefault("featureCol", "features")
-labelCol = getFitParamWithDefault("labelCol", "label")
+featureCol = param("featureCol", "features")
+labelCol = param("labelCol", "label")
 
 
 def load_sparse_data():
@@ -95,12 +94,10 @@ model = svm.SVC()
 X, y = load_sparse_data()
 model.fit(X, y)
 
-isp = mlsql.params()["internalSystemParam"]
-
-if "tempModelLocalPath" not in isp:
+if "tempModelLocalPath" not in mlsql.internal_system_param:
     raise Exception("tempModelLocalPath is not configured")
 
-tempModelLocalPath = isp["tempModelLocalPath"]
+tempModelLocalPath = mlsql.internal_system_param["tempModelLocalPath"]
 
 if not os.path.exists(tempModelLocalPath):
     os.makedirs(tempModelLocalPath)
