@@ -1,3 +1,8 @@
-from keras.models import load_model
+from __future__ import absolute_import
+from sklearn.svm import SVC
+from sklearn.naive_bayes import MultinomialNB
 
-model = load_model("/tmp/")
+model = SVC()
+model2 = MultinomialNB()
+print(hasattr(model,"partial_fit"))
+print(hasattr(model2,"partial_fit"))
