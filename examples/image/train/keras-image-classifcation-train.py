@@ -1,15 +1,9 @@
-from keras.applications.inception_v3 import InceptionV3
-from keras.callbacks import Callback
-from keras.models import Model
-from keras.layers import Dense, GlobalAveragePooling2D
-from keras.layers import Input
 import numpy as np
 import os
 import json
 import sys
 
-run_for_test = False
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+run_for_test = True
 if run_for_test:
     if sys.version < '3':
         import cPickle as pickle
@@ -58,6 +52,31 @@ labelSize = int(getFitParamWithDefault("labelSize", 10))
 featureCol = getFitParamWithDefault("featureCol", "features")
 labelCol = getFitParamWithDefault("labelCol", "label")
 epoch = int(getFitParamWithDefault("epoch", "1"))
+enableGPU = bool(getFitParamWithDefault("enableGPU", "true"))
+numCores = int(getFitParamWithDefault("numCores", "4"))
+
+import tensorflow as tf
+from keras import backend as K
+from keras.applications.inception_v3 import InceptionV3
+from keras.callbacks import Callback
+from keras.models import Model
+from keras.layers import Dense, GlobalAveragePooling2D
+from keras.layers import Input
+
+if enableGPU:
+    num_GPU = 1
+    num_CPU = 1
+    gpu_options = tf.GPUOptions(allow_growth=True)
+else:
+    num_CPU = 1
+    num_GPU = 0
+    gpu_options = tf.GPUOptions()
+
+config = tf.ConfigProto(intra_op_parallelism_threads=numCores,
+                        inter_op_parallelism_threads=numCores, allow_soft_placement=True,
+                        device_count={'CPU': num_CPU, 'GPU': num_GPU}, gpu_options=gpu_options)
+session = tf.Session(config=config)
+K.set_session(session)
 
 
 def get_validate_data():
@@ -155,6 +174,6 @@ tempModelLocalPath = isp["tempModelLocalPath"]
 
 if not os.path.exists(tempModelLocalPath):
     os.makedirs(tempDataLocalPath)
-model.save(tempModelLocalPath + "/dxy-d-train.h5")
+model.save(tempModelLocalPath + "/model.h5")
 
 # print(model.predict(np.array(X)))
