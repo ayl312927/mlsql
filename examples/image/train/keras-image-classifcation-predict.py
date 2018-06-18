@@ -28,7 +28,7 @@ def predict(index, items):
     model = os.mlsql_models[modelPath]
     rawVector = pickle.loads(items[0])
     feature = VectorUDT().deserialize(rawVector).toArray()
-    y = model.predict(np.reshape(feature, [width, height, 3]))
+    y = model.predict(np.reshape(feature, [width, height, 3]), batch_size=1)
     return [VectorUDT().serialize(Vectors.dense(y))]
 
 
