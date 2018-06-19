@@ -5,7 +5,7 @@ import os
 import numpy as np
 from keras.models import load_model
 
-run_for_test = True
+run_for_test = False
 if run_for_test:
     import mlsql.python_fun
 else:

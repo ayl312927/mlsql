@@ -13,22 +13,25 @@ if sys.version < '3':
 
 else:
     import pickle
+
     xrange = range
 
 unicode = str
 
-run_for_test = True
+run_for_test = False
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 if run_for_test:
+    from sklearn.svm import SVC
+
     # config parameters
     PARAM_FILE = "python_temp.pickle"
     pp = {'internalSystemParam': {'tempModelLocalPath': '/tmp/__mlsql__/3242514c-4113-4105-bdc5-9987b28f9764/0',
                                   'tempDataLocalPath': '/Users/allwefantasy/Downloads/data1', 'stopFlagNum': 9},
           'systemParam': {'pythonVer': '2.7', 'pythonPath': 'python'},
           'fitParam': {'labelCol': 'label', 'featureCol': 'features', 'height': '100', 'width': '100',
-                       'modelPath': '/tmp/pa_model', 'labelSize': '2', 'verbose': 'true',
-                       'moduleName': 'sklearn.naive_bayes',
-                       'className': 'MultinomialNB'},
+                       'modelPath': '/tmp/pa_model', 'labelSize': '2',
+                       'moduleName': 'sklearn.svm',
+                       'className': 'SVC'},
           'kafkaParam': {'topic': 'zhuhl_1528712229620', 'bootstrap.servers': '127.0.0.1:9092',
                          'group_id': 'zhuhl_test_0', 'userName': 'zhuhl', 'reuse': 'true'}}
 
@@ -96,7 +99,12 @@ def load_sparse_data():
                 else:
                     y.append(obj[labelCol])
                 row_index += 1
-    print("X matrix : %s %s  row_n:%s col_n:%s" % (row_index, feature_size, len(row_n), len(col_n)))
+                if row_index % 10000 == 0:
+                    print("processing lines: %s, values: %s" % (str(row_index), str(len(row_n))))
+                    # sys.stdout.flush()
+    print("X matrix : %s %s  row_n:%s col_n:%s classNum:%s" % (
+        row_index, feature_size, len(row_n), len(col_n), ",".join([str(i) for i in list(set(y))])))
+    sys.stdout.flush()
     return sp.csc_matrix((data_n, (row_n, col_n)), shape=(row_index, feature_size)), y
 
 
@@ -132,7 +140,7 @@ def load_batch_data():
 def create_alg(module_name, class_name):
     module = importlib.import_module(module_name)
     class_ = getattr(module, class_name)
-    return class_()
+    return class_(verbose=1)
 
 
 def configure_alg_params(clf):
