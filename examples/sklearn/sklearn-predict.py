@@ -3,14 +3,15 @@ from pyspark.ml.linalg import VectorUDT, Vectors
 import pickle
 import os
 
-run_for_test = True
+run_for_test = False
 if run_for_test:
     import mlsql.python_fun
 else:
     import python_fun
 
 
-def predict(index, items):
+def predict(index, s):
+    items = [i for i in s]
     modelPath = pickle.loads(items[1])[0] + "/model.pkl"
 
     if not hasattr(os, "mlsql_models"):
