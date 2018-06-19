@@ -29,7 +29,7 @@ if run_for_test:
                                   'tempDataLocalPath': '/Users/allwefantasy/Downloads/data1', 'stopFlagNum': 9},
           'systemParam': {'pythonVer': '2.7', 'pythonPath': 'python'},
           'fitParam': {'labelCol': 'label', 'featureCol': 'features', 'height': '100', 'width': '100',
-                       'modelPath': '/tmp/pa_model', 'labelSize': '2',
+                       'modelPath': '/tmp/pa_model', 'labelSize': '2', 'class_weight': '{"1":2}',
                        'moduleName': 'sklearn.svm',
                        'className': 'SVC'},
           'kafkaParam': {'topic': 'zhuhl_1528712229620', 'bootstrap.servers': '127.0.0.1:9092',
@@ -144,26 +144,37 @@ def create_alg(module_name, class_name):
 
 
 def configure_alg_params(clf):
+    def class_weight(value):
+        if value == "balanced":
+            clf.class_weight = value
+        else:
+            clf.class_weight = dict([(int(k), int(v)) for (k, v) in json.loads(value).items()])
+
+    options = {
+        "class_weight": class_weight
+    }
+
     def t(v, convert_v):
         if type(v) == float:
             return float(convert_v)
         elif type(v) == int:
             return int(convert_v)
         elif type(v) == list:
-            if type(v[0]) == int:
-                return [int(i) for i in v]
-            if type(v[0]) == float:
-                return [float(i) for i in v]
-            return v
+            json.loads(convert_v)
+        elif type(v) == dict:
+            json.loads(convert_v)
         elif type(v) == bool:
-            return bool(v)
+            return bool(convert_v)
         else:
             return convert_v
 
     for name in clf.get_params():
         if name in mlsql.fit_param:
-            dv = clf.get_params()[name]
-            setattr(clf, name, t(dv, mlsql.fit_param[name]))
+            if name in options:
+                options[name](mlsql.fit_param[name])
+            else:
+                dv = clf.get_params()[name]
+                setattr(clf, name, t(dv, mlsql.fit_param[name]))
 
 
 model = create_alg(moduleName, className)

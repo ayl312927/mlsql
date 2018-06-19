@@ -12,7 +12,8 @@ else:
     import python_fun
 
 
-def predict(index, items):
+def predict(index, s):
+    items = [i for i in s]
     modelPath = pickle.loads(items[1])[0] + "/model.h5"
 
     if not hasattr(os, "mlsql_models"):
