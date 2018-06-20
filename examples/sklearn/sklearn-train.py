@@ -140,7 +140,7 @@ def load_batch_data():
 def create_alg(module_name, class_name):
     module = importlib.import_module(module_name)
     class_ = getattr(module, class_name)
-    return class_(verbose=1)
+    return class_()
 
 
 def configure_alg_params(clf):
@@ -185,9 +185,12 @@ if not hasattr(model, "partial_fit"):
     model.fit(X, y)
 else:
     assert labelSize != -1
-    print("use partial_fit ")
+    print("using partial_fit to batch_train:")
+    batch_count = 0
     for X, y in load_batch_data():
         model.partial_fit(X, y, [i for i in xrange(labelSize)])
+        batch_count += 1
+        print("partial_fit iteration: %s, batch_size:%s" % (str(batch_count), str(batchSize)))
 
 if "tempModelLocalPath" not in mlsql.internal_system_param:
     raise Exception("tempModelLocalPath is not configured")
