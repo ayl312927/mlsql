@@ -21,7 +21,7 @@ unicode = str
 run_for_test = False
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 if run_for_test:
-    from sklearn.svm import SVC
+    from sklearn.naive_bayes import GaussianNB
 
     # config parameters
     PARAM_FILE = "python_temp.pickle"

@@ -3,7 +3,7 @@ import os
 import json
 import sys
 
-run_for_test = True
+run_for_test = False
 if run_for_test:
     if sys.version < '3':
         import cPickle as pickle
