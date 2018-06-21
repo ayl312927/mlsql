@@ -2,6 +2,7 @@ import numpy as np
 import os
 import json
 import sys
+from pyspark.mllib.linalg import Vectors, SparseVector
 
 run_for_test = False
 if run_for_test:
@@ -9,6 +10,8 @@ if run_for_test:
         import cPickle as pickle
     else:
         import pickle
+
+        xrange = range
 
     unicode = str
 
@@ -52,6 +55,7 @@ labelSize = int(getFitParamWithDefault("labelSize", 10))
 featureCol = getFitParamWithDefault("featureCol", "features")
 labelCol = getFitParamWithDefault("labelCol", "label")
 epoch = int(getFitParamWithDefault("epoch", "1"))
+batchSize = int(getFitParamWithDefault("batchSize", "64"))
 enableGPU = bool(getFitParamWithDefault("enableGPU", "true"))
 numCores = int(getFitParamWithDefault("numCores", "4"))
 
@@ -124,29 +128,43 @@ def from_kafka():
     for items in rd(max_records=64):
         _x = [item[featureCol].toArray() for item in items]
         _y = [item[labelCol] for item in items]
-        print(np.array(_x).shape)
-        print(np.array(_y).shape)
-        yield ({'X': _x}, {'Y': _y})
+        yield (np.array(_x), np.array(_y))
 
 
-def from_file():
-    while True:
-        _x = []
-        _y = []
-        for file in datafiles:
-            with open(tempDataLocalPath + "/" + file) as f:
-                for line in f.readlines():
-                    obj = json.loads(line)
-                    _x.append(np.reshape(obj[featureCol], [100, 100, 3]))
-                    _y.append(obj[labelCol])
-
-                    if len(_x) == 64:
-                        yield (np.array(_x), np.array(_y))
-                        _x = []
-                        _y = []
+def vectorize(fc):
+    if "size" not in fc and "type" not in fc:
+        sv = fc
+    elif "size" not in fc and "type" in fc and fc["type"] == 1:
+        sv = fc["values"]
+    else:
+        sv = Vectors.sparse(fc["size"], list(zip(fc["indices"], fc["values"]))).toArray()
+    return sv
 
 
-fetchData = from_file if len(datafiles) > 0 else from_kafka
+def load_batch_data():
+    import mlsql
+    tempDataLocalPath = mlsql.internal_system_param["tempDataLocalPath"]
+    datafiles = [file for file in os.listdir(tempDataLocalPath) if file.endswith(".json")]
+    X = []
+    y = []
+    count = 0
+
+    for file in datafiles:
+        with open(tempDataLocalPath + "/" + file) as f:
+            for line in f.readlines():
+                obj = json.loads(line)
+                fc = vectorize(obj[featureCol])
+                X.append(np.reshape(fc, (width, height, 3)))
+                lc = vectorize(obj[labelCol])
+                y.append(np.array(lc))
+                count += 1
+                if count % batchSize == 0:
+                    yield np.array(X), np.array(y)
+                    X = []
+                    y = []
+
+
+fetchData = load_batch_data if len(datafiles) > 0 else from_kafka
 
 
 class TestCallback(Callback):
@@ -159,11 +177,24 @@ class TestCallback(Callback):
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 
+# model.fit_generator(fetchData(), epochs=epoch, steps_per_epoch=64000 / 64)
+
 if run_for_test:
     model.fit_generator(fetchData(), epochs=10, steps_per_epoch=564 / 64, validation_data=(X_test, y_test),
                         callbacks=[TestCallback((X_test, y_test))])
 else:
-    model.fit_generator(fetchData(), epochs=epoch, steps_per_epoch=9000 / 64)
+    ep_count = 0
+    # model.fit_generator(fetchData(), epochs=epoch, steps_per_epoch=64000 / 64)
+    for ep in xrange(epoch):
+        ep_count += 1
+        iteration_count = 0
+        for (X, y) in fetchData():
+            iteration_count += 1
+            outputs = model.train_on_batch(X, y)
+            print("epochs: %s, iterations: %s detail:%s" % (str(ep_count), str(iteration_count), outputs))
+            # if iteration_count % 10 == 0:
+            #     loss, acc = model.evaluate(X, y, verbose=0)
+            #     print('\nloss: {}, acc: {}\n'.format(loss, acc))
 
 isp = mlsql.params()["internalSystemParam"]
 
@@ -173,7 +204,7 @@ if "tempModelLocalPath" not in isp:
 tempModelLocalPath = isp["tempModelLocalPath"]
 
 if not os.path.exists(tempModelLocalPath):
-    os.makedirs(tempDataLocalPath)
+    os.makedirs(tempModelLocalPath)
 model.save(tempModelLocalPath + "/model.h5")
 
 # print(model.predict(np.array(X)))

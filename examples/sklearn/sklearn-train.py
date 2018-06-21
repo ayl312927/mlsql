@@ -81,10 +81,16 @@ def load_sparse_data():
             for line in f.readlines():
                 obj = json.loads(line)
                 fc = obj[featureCol]
-                if "size" not in fc:
+                if "size" not in fc and "type" not in fc:
                     feature_size = len(fc)
                     dic = [(i, a) for i, a in enumerate(fc)]
                     sv = SparseVector(len(fc), dic)
+                elif "size" not in fc and "type" in fc and fc["type"] == 1:
+                    values = fc["values"]
+                    feature_size = len(values)
+                    dic = [(i, a) for i, a in enumerate(values)]
+                    sv = SparseVector(len(values), dic)
+
                 else:
                     feature_size = fc["size"]
                     sv = Vectors.sparse(fc["size"], list(zip(fc["indices"], fc["values"])))
@@ -120,9 +126,13 @@ def load_batch_data():
             for line in f.readlines():
                 obj = json.loads(line)
                 fc = obj[featureCol]
-                if "size" not in fc:
+                if "size" not in fc and "type" not in fc:
                     dic = [(i, a) for i, a in enumerate(fc)]
                     sv = SparseVector(len(fc), dic)
+                elif "size" not in fc and "type" in fc and fc["type"] == 1:
+                    values = fc["values"]
+                    dic = [(i, a) for i, a in enumerate(values)]
+                    sv = SparseVector(len(values), dic)
                 else:
                     sv = Vectors.sparse(fc["size"], list(zip(fc["indices"], fc["values"])))
                 count += 1
