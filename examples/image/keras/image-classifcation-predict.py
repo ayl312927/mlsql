@@ -3,7 +3,6 @@ from pyspark.ml.linalg import VectorUDT, Vectors
 import pickle
 import os
 import numpy as np
-from keras.models import load_model
 
 run_for_test = False
 if run_for_test:
@@ -15,22 +14,31 @@ else:
 def predict(index, s):
     items = [i for i in s]
     modelPath = pickle.loads(items[1])[0] + "/model.h5"
-
     if not hasattr(os, "mlsql_models"):
         setattr(os, "mlsql_models", {})
     if modelPath not in os.mlsql_models:
-        print("Load Keras model %s" % modelPath)
+        # import tensorflow as tf
+        # from keras import backend as K
+        # gpu_options = tf.GPUOptions(allow_growth=True)
+        # config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
+        # session = tf.Session(config=config)
+        # K.set_session(session)
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        print("Load Keras model %s, CUDA_VISIBLE_DEVICES:%s " % (modelPath, os.environ["CUDA_VISIBLE_DEVICES"]))
+        from keras.models import load_model
         os.mlsql_models[modelPath] = load_model(modelPath)
     # here we can get train params
     trainParams = pickle.loads(items[2])[0]
-    width = int(trainParams["width"])
-    height = int(trainParams["height"])
+    width = int(trainParams["fitParam.0.width"])
+    height = int(trainParams["fitParam.0.height"])
 
     model = os.mlsql_models[modelPath]
     rawVector = pickle.loads(items[0])
     feature = VectorUDT().deserialize(rawVector).toArray()
-    y = model.predict(np.reshape(feature, [width, height, 3]), batch_size=1)
-    return [VectorUDT().serialize(Vectors.dense(y))]
+    feature_final = np.reshape(feature, [1, width, height, 3])
+    # y是一个numpy对象，是一个预测结果的数组。因为predict是支持批量预测的，所以是一个二维数组。
+    y = model.predict(feature_final)
+    return [VectorUDT().serialize(Vectors.dense(y.tolist()[0]))]
 
 
 if run_for_test:
