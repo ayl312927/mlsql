@@ -160,8 +160,12 @@ def configure_alg_params(clf):
         else:
             clf.class_weight = dict([(int(k), int(v)) for (k, v) in json.loads(value).items()])
 
+    def max_depth(value):
+        clf.max_depth = int(value)
+
     options = {
-        "class_weight": class_weight
+        "class_weight": class_weight,
+        "max_depth": max_depth
     }
 
     def t(v, convert_v):
